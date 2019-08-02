@@ -1,0 +1,44 @@
+---
+title: "Azure DevOps Status Report"
+output: html_document
+params:
+  domain: NA
+  auth: NA
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(azuredevopsR)
+library(dplyr)
+
+auth <- params$auth
+
+domain <- params$domain
+
+```
+
+## Background
+
+This is a status report for all projects within your specified Azure DevOps domain.
+
+## Project Overview
+
+```{r projects repos, echo = FALSE}
+projects <- azuredevopsR::list_projects(domain, auth)
+
+repos <- lapply(projects$name, azuredevopsR::list_repos, domain = domain, auth = auth) %>% bind_rows()
+
+```
+
+Within the `r domain` domain you have access to `r nrow(projects)` projects containing `r nrow(repos)` repositories. These projects are as follows:
+
+```{r projects summary kable, echo = FALSE}
+projects %>%
+  left_join(repos, by = c("id"= "project.id")) %>%
+  mutate(lastupdated = as.Date(lastUpdateTime)) %>%
+  group_by(name = name.x, description, lastupdated) %>%
+  summarise(repos = n()) %>%
+  ungroup() %>%
+  DT::datatable()
+```
